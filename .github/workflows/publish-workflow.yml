@@ -38,7 +38,6 @@ jobs:
           # Update the container app job with the new image tag
           IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
           az containerapp job update \
-            --name ms-teams-container-job
-             \
+            --name ms-teams-container-job \
             --resource-group SGABlitzday \
             --image blitzdaycontainer-ehape0bqf8gfc8ek.azurecr.io/ms-teams-container-job-img:$IMAGE_TAG
