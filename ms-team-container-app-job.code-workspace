@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "ms-team-container-app-job",
+			"path": "../ms-team-container-app-job"
+		}
+	],
+	"settings": {}
+}
