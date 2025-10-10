@@ -66,26 +66,32 @@ def flatten_attendance_records(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         att = ev.get("attendance") or {}
         for rep in att.get("attendanceReports", []) or []:
             for rec in rep.get("records", []) or []:
-                rows.append({
-                    "doc_user": doc.get("user"),
-                    "doc_fetchedUtc": doc.get("fetchedUtc"),
-                    "event_id": ev.get("id"),
-                    "event_subject": ev.get("subject"),
-                    "event_start": _get(ev, "start.dateTime"),
-                    "event_end": _get(ev, "end.dateTime"),
-                    "onlineMeetingId": att.get("onlineMeetingId"),
-                    "report_id": rep.get("report_id"),
-                    "meetingStartDateTime": rep.get("meetingStartDateTime"),
-                    "meetingEndDateTime": rep.get("meetingEndDateTime"),
-                    "total_participants": rep.get("total_participants"),
-                    "record_id": rec.get("id"),
-                    "displayName": rec.get("displayName"),
-                    "emailAddress": rec.get("emailAddress"),
-                    "role": rec.get("role"),
-                    "joinDateTime": rec.get("joinDateTime"),
-                    "leaveDateTime": rec.get("leaveDateTime"),
-                    "durationInSeconds": rec.get("durationInSeconds"),
-                })
+                for r in rec.get("attendanceIntervals",[]) or []:
+                    rows.append({
+                        "doc_user": doc.get("user"),
+                        "doc_fetchedUtc": doc.get("fetchedUtc"),
+                        "event_id": ev.get("id"),
+                        "event_subject": ev.get("subject"),
+                        "event_start": _get(ev, "start.dateTime"),
+                        "event_end": _get(ev, "end.dateTime"),
+                        "onlineMeetingId": att.get("onlineMeetingId"),
+                        "report_id": rep.get("report_id"),
+                        "meetingStartDateTime": rep.get("meetingStartDateTime"),
+                        "meetingEndDateTime": rep.get("meetingEndDateTime"),
+                        "total_participants": rep.get("total_participants"),
+                        "record_id": rec.get("id"),
+                        "displayName": rec.get("identity").get("displayName"),
+                        "tenantId":rec.get("identity").get("tenantId"),
+                        "emailAddress": rec.get("emailAddress"),
+                        "role": rec.get("role"),
+                        "joinDateTime": r.get("joinDateTime"),
+                        "leaveDateTime": r.get("leaveDateTime"),
+                        "durationInSeconds": r.get("durationInSeconds"),
+                        "externalRegistrationInformation_referrer":rec.get("attendanceIntervals",[]).get("referrer",[]),
+                        "externalRegistrationInformation_registrationId":rec.get("attendanceIntervals",[]).get("registrationId",[]),
+
+                    })
+
     return rows
 
 # ---------- Public API: JSON -> DataFrames ----------
