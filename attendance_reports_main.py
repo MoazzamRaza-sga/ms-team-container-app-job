@@ -181,7 +181,7 @@ def fetch_all_events(headers: dict, user_upn: str, use_calendar_view=False,
 # ---------- Online meeting + attendance ----------
 def find_online_meeting_by_join_url(headers: dict, user_upn: str, join_url: str) -> dict | None:
     base = f"https://graph.microsoft.com/v1.0/users/{user_upn}/onlineMeetings"
-    params = {"$filter": f"JoinWebUrl eq '{join_url}'", "$top": "1"}
+    params = {"$filter": f"JoinWebUrl eq '{join_url}'"}
     for page in graph_paged_get(base, headers, params=params):
         items = page.get("value", [])
         if items:
