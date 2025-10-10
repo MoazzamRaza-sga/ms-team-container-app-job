@@ -7,11 +7,14 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 import config as cfg
+from parquet_utils import json_docs_to_dataframes, write_parquet_blob
+
 
 TENANT        = cfg.get_details("tenant")
 CLIENT_ID     = cfg.get_details("client_id")
 CLIENT_SECRET = cfg.get_details("client_scret")
 SGA_UPN       = cfg.get_details("sga_upn")
+
 
 # ===== Registry-in-Blob settings (override via env if you like) =====
 REG_ACCOUNT_URL  = os.getenv("REG_ACCOUNT_URL",  "https://sgaanalyticsstorageacnt.blob.core.windows.net")
@@ -22,7 +25,6 @@ REG_BLOB_NAME    = os.getenv("REG_BLOB_NAME",    "msteams/registry/latest_meetin
 def _blob_client(account_url: str, container: str, blob_name: str):
     cred = DefaultAzureCredential()
     svc  = BlobServiceClient(account_url=account_url, credential=cred)
-    # Ensure container exists
     try:
         svc.get_container_client(container).create_container()
     except ResourceExistsError:
@@ -35,8 +37,8 @@ def save_json_to_blob(
     container="staging",
     app_prefix="msteams",
     blob_name=None,
-    file_name = "",
-    overwrite=False
+    file_name="",
+    overwrite=True,  # <— default to overwrite
 ) -> str:
     cred = DefaultAzureCredential()
     svc  = BlobServiceClient(account_url=account_url, credential=cred)
@@ -45,11 +47,14 @@ def save_json_to_blob(
     except ResourceExistsError:
         pass
 
+    # Build deterministic path: yyyy/mm/dd/<file_name>.json
     if not blob_name:
         now = datetime.now(timezone.utc)
-        ts  = now.strftime("%Y%m%dT%H%M%SZ")
+        if not file_name:
+            file_name = "data"
         blob_name = f"{app_prefix}/{now:%Y/%m/%d}/{file_name}.json"
 
+    # Normalize to bytes
     if isinstance(json_payload, (dict, list)):
         data = json.dumps(json_payload, ensure_ascii=False, indent=2).encode("utf-8")
     elif isinstance(json_payload, str):
@@ -61,7 +66,8 @@ def save_json_to_blob(
 
     blob = svc.get_blob_client(container, blob_name)
     blob.upload_blob(
-        data=data, overwrite=overwrite,
+        data=data,
+        overwrite=overwrite,  # <— key bit
         content_settings=ContentSettings(content_type="application/json"),
     )
     return f"{account_url.rstrip('/')}/{container}/{blob_name}"
@@ -88,10 +94,6 @@ def parse_graph_datetime(dt_str: str) -> datetime | None:
         return None
 
 def load_checkpoint_from_blob() -> datetime | None:
-    """
-    Reads the latest meeting start (ISO8601 Z) from a small text blob.
-    Returns None if it doesn't exist or is invalid.
-    """
     bc = _blob_client(REG_ACCOUNT_URL, REG_CONTAINER, REG_BLOB_NAME)
     try:
         data = bc.download_blob().readall().decode("utf-8").strip()
@@ -108,18 +110,13 @@ def load_checkpoint_from_blob() -> datetime | None:
         return None
 
 def save_checkpoint_to_blob(latest_dt: datetime) -> str:
-    """
-    Writes the latest meeting start (ISO8601 Z) to the text blob.
-    Overwrites existing.
-    """
     bc = _blob_client(REG_ACCOUNT_URL, REG_CONTAINER, REG_BLOB_NAME)
     content = to_iso_z(latest_dt).encode("utf-8")
     bc.upload_blob(
         data=content,
-        overwrite=True,
+        overwrite=True,  # always replace registry
         content_settings=ContentSettings(content_type="text/plain; charset=utf-8"),
     )
-    # Return URL for logging
     return f"{REG_ACCOUNT_URL.rstrip('/')}/{REG_CONTAINER}/{REG_BLOB_NAME}"
 
 # ---------- Auth ----------
@@ -180,6 +177,7 @@ def fetch_all_events(headers: dict, user_upn: str, use_calendar_view=False,
 
 # ---------- Online meeting + attendance ----------
 def find_online_meeting_by_join_url(headers: dict, user_upn: str, join_url: str) -> dict | None:
+    # No $top here (some tenants disallow it)
     base = f"https://graph.microsoft.com/v1.0/users/{user_upn}/onlineMeetings"
     params = {"$filter": f"JoinWebUrl eq '{join_url}'"}
     for page in graph_paged_get(base, headers, params=params):
@@ -216,31 +214,27 @@ def main():
 
         now_utc = datetime.now(timezone.utc)
         end_iso = to_iso_z(now_utc)
-        start_iso=f"1900-01-01T15:04:30"
 
         # Load checkpoint from Blob
         last_seen = load_checkpoint_from_blob()
-        events = {}
+
+        # Decide window + fetch events
         if last_seen is None:
-            print(f"Querying events")
-            # start_utc = now_utc - timedelta(days=30)
-            events = fetch_all_events(
-                        headers, SGA_UPN
-                    )     # first run default
-        else:
-            start_utc = last_seen - timedelta(minutes=5) # small overlap
+            start_utc = now_utc - timedelta(days=30)  # first run
             start_iso = to_iso_z(start_utc)
-
+            print(f"First run. Querying last 30 days: {start_iso} -> {end_iso}")
+            events = fetch_all_events(headers, SGA_UPN, use_calendar_view=True,
+                                      start_dt_iso=start_iso, end_dt_iso=end_iso)
+        else:
+            start_utc = last_seen - timedelta(minutes=5)  # tiny overlap
+            start_iso = to_iso_z(start_utc)
             print(f"Querying events for {SGA_UPN} from {start_iso} to {end_iso}")
+            events = fetch_all_events(headers, SGA_UPN, use_calendar_view=True,
+                                      start_dt_iso=start_iso, end_dt_iso=end_iso)
 
-            # Use a bounded window
-            events = fetch_all_events(
-                headers, SGA_UPN, use_calendar_view=True,
-                start_dt_iso=start_iso, end_dt_iso=end_iso
-            )
-            print(f"Total events fetched: {len(events)}")
+        print(f"Total events fetched: {len(events)}")
 
-        # ---- SAVE #1: events-only snapshot ----
+        # ---- SAVE #1: events-only snapshot (OVERWRITES within the same date folder) ----
         events_only_payload = {
             "user": SGA_UPN,
             "windowStartUtc": start_iso,
@@ -251,15 +245,16 @@ def main():
         }
         events_only_url = save_json_to_blob(
             events_only_payload,
-            app_prefix="msteams/events-only",
-            file_name= "events"
+            app_prefix="msteams/json/events-only",
+            file_name="events",     # stable name -> overwrite in same folder/date
+            overwrite=True
         )
         print("Saved EVENTS-ONLY JSON to:", events_only_url)
 
         # ---- Enrich with attendance & track latest start ----
         enriched_events = []
         latest_start_seen = last_seen or datetime.min.replace(tzinfo=timezone.utc)
-         
+
         for ev in events:
             ev_start_dt = parse_graph_datetime((ev.get("start") or {}).get("dateTime"))
             if ev_start_dt and ev_start_dt > latest_start_seen:
@@ -290,7 +285,7 @@ def main():
                 enriched["attendance"] = attendance_payload
             enriched_events.append(enriched)
 
-        # ---- SAVE #2: final (events + attendance) ----
+        # ---- SAVE #2: final (events + attendance) — OVERWRITES within same date folder ----
         final_json = {
             "user": SGA_UPN,
             "windowStartUtc": start_iso,
@@ -301,17 +296,33 @@ def main():
         }
         final_url = save_json_to_blob(
             final_json,
-            app_prefix="msteams/final-with-attendance",
-            file_name= "event_attendence_details"
+            app_prefix="msteams/json/final-with-attendance",
+            file_name="event_attendance_details",  # stable name -> overwrite in same folder/date
+            overwrite=True
         )
         print("Saved FINAL (events+attendance) JSON to:", final_url)
 
-        # ---- Update registry in Blob ----
-        if latest_start_seen:
+        # ---- Update registry in Blob (always overwrite) ----
+        if latest_start_seen and latest_start_seen != datetime.min.replace(tzinfo=timezone.utc):
             reg_url = save_checkpoint_to_blob(latest_start_seen)
             print("Updated registry blob:", reg_url, "->", to_iso_z(latest_start_seen))
         else:
             print("No valid meeting start times found to update registry.")
+
+
+        docs = [events_only_payload, final_json]  # one or many
+        dfs = json_docs_to_dataframes(docs)
+
+        # Write to blob
+        urls = write_parquet_blob(
+            dfs,
+            account_url="https://sgaanalyticsstorageacnt.blob.core.windows.net",
+            container="staging",
+            prefix="msteams/parquet/2025/10/10",   # your target folder
+            overwrite=True
+        )
+        print("Parquet written at:", urls)
+        
 
     except Exception as e:
         print(f"Error: {e}")
