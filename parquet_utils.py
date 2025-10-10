@@ -3,10 +3,10 @@ from __future__ import annotations
 import io
 import json
 from typing import Any, Dict, Iterable, List, Tuple
-
 import pandas as pd
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
+from datetime import datetime, timedelta, timezone
 
 # ---------- Flatten helpers ----------
 def _get(d: Dict, path: str, default=None):
@@ -144,13 +144,15 @@ def write_parquet_blob(
     dfs: Dict[str, pd.DataFrame],
     account_url: str,
     container: str,
-    prefix: str,
-    overwrite: bool = True
+    overwrite: bool = True,
+    app_prefix = "msteams",
+
 ) -> Dict[str, str]:
     """
     Writes Parquet files to Azure Blob at <container>/<prefix>/<name>.parquet.
     Returns dict of blob URLs.
     """
+    now = datetime.now(timezone.utc)
     cred = DefaultAzureCredential()
     svc  = BlobServiceClient(account_url=account_url, credential=cred)
     cc   = svc.get_container_client(container)
@@ -166,7 +168,7 @@ def write_parquet_blob(
         buf = io.BytesIO()
         df.to_parquet(buf, index=False)
         buf.seek(0)
-        blob_name = f"{prefix.rstrip('/')}/{name}.parquet"
+        blob_name = f"{app_prefix}/parquet/{now:%Y/%m/%d}/{name}.parquet"
         bc = cc.get_blob_client(blob_name)
         bc.upload_blob(
             buf.getvalue(),

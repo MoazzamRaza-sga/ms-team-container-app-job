@@ -318,7 +318,6 @@ def main():
             dfs,
             account_url="https://sgaanalyticsstorageacnt.blob.core.windows.net",
             container="staging",
-            prefix="msteams/parquet/2025/10/10",   # your target folder
             overwrite=True
         )
         print("Parquet written at:", urls)
