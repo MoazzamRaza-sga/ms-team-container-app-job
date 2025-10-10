@@ -16,7 +16,7 @@ SGA_UPN       = cfg.get_details("sga_upn")
 # ===== Registry-in-Blob settings (override via env if you like) =====
 REG_ACCOUNT_URL  = os.getenv("REG_ACCOUNT_URL",  "https://sgaanalyticsstorageacnt.blob.core.windows.net")
 REG_CONTAINER    = os.getenv("REG_CONTAINER",    "staging")
-REG_BLOB_NAME    = os.getenv("REG_BLOB_NAME",    "ms-graph-events/registry/latest_meeting_start.txt")
+REG_BLOB_NAME    = os.getenv("REG_BLOB_NAME",    "msteams/registry/latest_meeting_start.txt")
 
 # ---------- Blob helpers ----------
 def _blob_client(account_url: str, container: str, blob_name: str):
@@ -251,7 +251,7 @@ def main():
         }
         events_only_url = save_json_to_blob(
             events_only_payload,
-            app_prefix="ms-graph-events/events-only",
+            app_prefix="msteams/events-only",
             file_name= "events"
         )
         print("Saved EVENTS-ONLY JSON to:", events_only_url)
@@ -301,7 +301,7 @@ def main():
         }
         final_url = save_json_to_blob(
             final_json,
-            app_prefix="ms-graph-events/final-with-attendance",
+            app_prefix="msteams/final-with-attendance",
             file_name= "event_attendence_details"
         )
         print("Saved FINAL (events+attendance) JSON to:", final_url)
