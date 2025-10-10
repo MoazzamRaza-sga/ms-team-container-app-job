@@ -33,8 +33,9 @@ def save_json_to_blob(
     json_payload,
     account_url="https://sgaanalyticsstorageacnt.blob.core.windows.net",
     container="staging",
-    app_prefix="ms-graph-events",
+    app_prefix="msteams",
     blob_name=None,
+    file_name = "",
     overwrite=False
 ) -> str:
     cred = DefaultAzureCredential()
@@ -47,7 +48,7 @@ def save_json_to_blob(
     if not blob_name:
         now = datetime.now(timezone.utc)
         ts  = now.strftime("%Y%m%dT%H%M%SZ")
-        blob_name = f"{app_prefix}/{now:%Y/%m/%d}/events_{ts}.json"
+        blob_name = f"{app_prefix}/{now:%Y/%m/%d}/{file_name}.json"
 
     if isinstance(json_payload, (dict, list)):
         data = json.dumps(json_payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -250,7 +251,8 @@ def main():
         }
         events_only_url = save_json_to_blob(
             events_only_payload,
-            app_prefix="ms-graph-events/events-only"
+            app_prefix="ms-graph-events/events-only",
+            file_name= "events"
         )
         print("Saved EVENTS-ONLY JSON to:", events_only_url)
 
@@ -299,12 +301,13 @@ def main():
         }
         final_url = save_json_to_blob(
             final_json,
-            app_prefix="ms-graph-events/final-with-attendance"
+            app_prefix="ms-graph-events/final-with-attendance",
+            file_name= "event_attendence_details"
         )
         print("Saved FINAL (events+attendance) JSON to:", final_url)
 
         # ---- Update registry in Blob ----
-        if latest_start_seen and latest_start_seen != datetime.min.replace(tzinfo=timezone.utc):
+        if latest_start_seen:
             reg_url = save_checkpoint_to_blob(latest_start_seen)
             print("Updated registry blob:", reg_url, "->", to_iso_z(latest_start_seen))
         else:
