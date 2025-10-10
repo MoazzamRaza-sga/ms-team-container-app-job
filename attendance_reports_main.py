@@ -226,7 +226,7 @@ def main():
                         headers, SGA_UPN
                     )     # first run default
         else:
-            start_utc = last_seen - timedelta(minutes=5) # small overlap
+            start_utc = last_seen - timedelta(days=1) # small overlap
             start_iso = to_iso_z(start_utc)
 
             print(f"Querying events for {SGA_UPN} from {start_iso} to {end_iso}")
@@ -255,7 +255,7 @@ def main():
 
         # ---- Enrich with attendance & track latest start ----
         enriched_events = []
-        latest_start_seen = last_seen or datetime.min.replace(tzinfo=timezone.utc)
+        latest_start_seen = end_iso
 
         for ev in events:
             ev_start_dt = parse_graph_datetime((ev.get("start") or {}).get("dateTime"))
