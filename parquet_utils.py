@@ -162,6 +162,7 @@ def write_parquet_blob(
         # Add/overwrite elt_date with today's date (as a string). If you prefer a date-like timestamp,
         # you can use: pd.to_datetime(now.date()) instead.
         df_out["elt_date"] = elt_date_str
+        df_out = df_out.astype("string")
 
         buf = io.BytesIO()
         df_out.to_parquet(buf, index=False)

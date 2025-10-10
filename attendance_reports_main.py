@@ -301,13 +301,7 @@ def main():
         )
         print("Saved FINAL (events+attendance) JSON to:", final_url)
 
-        # ---- Update registry in Blob (always overwrite) ----
-        if end_iso:
-            reg_url = save_checkpoint_to_blob(end_iso)
-            print("Updated registry blob:", reg_url, "->",end_iso)
-        else:
-            print("No valid meeting start times found to update registry.")
-
+        
 
         docs = [events_only_payload, final_json]  # one or many
         dfs = json_docs_to_dataframes(docs)
@@ -320,6 +314,14 @@ def main():
             overwrite=True
         )
         print("Parquet written at:", urls)
+
+        # ---- Update registry in Blob (always overwrite) ----
+        if end_iso:
+            reg_url = save_checkpoint_to_blob(end_iso)
+            print("Updated registry blob:", reg_url, "->",end_iso)
+        else:
+            print("No valid meeting start times found to update registry.")
+
         
 
     except Exception as e:
