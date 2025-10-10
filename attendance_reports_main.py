@@ -111,7 +111,7 @@ def load_checkpoint_from_blob() -> datetime | None:
 
 def save_checkpoint_to_blob(latest_dt: datetime) -> str:
     bc = _blob_client(REG_ACCOUNT_URL, REG_CONTAINER, REG_BLOB_NAME)
-    content = to_iso_z(latest_dt).encode("utf-8")
+    content = latest_dt.encode("utf-8")
     bc.upload_blob(
         data=content,
         overwrite=True,  # always replace registry
@@ -223,8 +223,7 @@ def main():
             start_utc = now_utc - timedelta(days=30)  # first run
             start_iso = to_iso_z(start_utc)
             print(f"First run. Querying last 30 days: {start_iso} -> {end_iso}")
-            events = fetch_all_events(headers, SGA_UPN, use_calendar_view=True,
-                                      start_dt_iso=start_iso, end_dt_iso=end_iso)
+            events = fetch_all_events(headers, SGA_UPN)
         else:
             start_utc = last_seen - timedelta(minutes=5)  # tiny overlap
             start_iso = to_iso_z(start_utc)
@@ -303,9 +302,9 @@ def main():
         print("Saved FINAL (events+attendance) JSON to:", final_url)
 
         # ---- Update registry in Blob (always overwrite) ----
-        if latest_start_seen and latest_start_seen != datetime.min.replace(tzinfo=timezone.utc):
-            reg_url = save_checkpoint_to_blob(latest_start_seen)
-            print("Updated registry blob:", reg_url, "->", to_iso_z(latest_start_seen))
+        if end_iso:
+            reg_url = save_checkpoint_to_blob(end_iso)
+            print("Updated registry blob:", reg_url, "->",end_iso)
         else:
             print("No valid meeting start times found to update registry.")
 
