@@ -215,6 +215,7 @@ def main():
 
         now_utc = datetime.now(timezone.utc)
         end_iso = to_iso_z(now_utc)
+        start_iso=f"1900-01-01T15:04:30"
 
         # Load checkpoint from Blob
         last_seen = load_checkpoint_from_blob()
@@ -226,7 +227,7 @@ def main():
                         headers, SGA_UPN
                     )     # first run default
         else:
-            start_utc = last_seen - timedelta(days=1) # small overlap
+            start_utc = last_seen - timedelta(minutes=5) # small overlap
             start_iso = to_iso_z(start_utc)
 
             print(f"Querying events for {SGA_UPN} from {start_iso} to {end_iso}")
@@ -255,8 +256,8 @@ def main():
 
         # ---- Enrich with attendance & track latest start ----
         enriched_events = []
-        latest_start_seen = end_iso
-
+        latest_start_seen = last_seen or datetime.min.replace(tzinfo=timezone.utc)
+         
         for ev in events:
             ev_start_dt = parse_graph_datetime((ev.get("start") or {}).get("dateTime"))
             if ev_start_dt and ev_start_dt > latest_start_seen:
