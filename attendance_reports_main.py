@@ -218,20 +218,25 @@ def main():
 
         # Load checkpoint from Blob
         last_seen = load_checkpoint_from_blob()
+        events = {}
         if last_seen is None:
-            start_utc = now_utc - timedelta(days=30)     # first run default
+            print(f"Querying events")
+            # start_utc = now_utc - timedelta(days=30)
+            events = fetch_all_events(
+                        headers, SGA_UPN
+                    )     # first run default
         else:
             start_utc = last_seen - timedelta(minutes=5) # small overlap
-        start_iso = to_iso_z(start_utc)
+            start_iso = to_iso_z(start_utc)
 
-        print(f"Querying events for {SGA_UPN} from {start_iso} to {end_iso}")
+            print(f"Querying events for {SGA_UPN} from {start_iso} to {end_iso}")
 
-        # Use a bounded window
-        events = fetch_all_events(
-            headers, SGA_UPN, use_calendar_view=True,
-            start_dt_iso=start_iso, end_dt_iso=end_iso
-        )
-        print(f"Total events fetched: {len(events)}")
+            # Use a bounded window
+            events = fetch_all_events(
+                headers, SGA_UPN, use_calendar_view=True,
+                start_dt_iso=start_iso, end_dt_iso=end_iso
+            )
+            print(f"Total events fetched: {len(events)}")
 
         # ---- SAVE #1: events-only snapshot ----
         events_only_payload = {
