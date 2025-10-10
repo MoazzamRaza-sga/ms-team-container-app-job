@@ -147,7 +147,7 @@ def write_parquet_blob(
         buf = io.BytesIO()
         df.to_parquet(buf, index=False)
         buf.seek(0)
-        blob_name = f"{app_prefix}/parquet/{now:%Y/%m/%d}/{name}.parquet"
+        blob_name = f"{app_prefix}/parquet/{name}/{now:%Y/%m/%d}/{name}.parquet"
         bc = cc.get_blob_client(blob_name)
         bc.upload_blob(
             buf.getvalue(),
