@@ -119,27 +119,6 @@ def json_docs_to_dataframes(docs: Iterable[Dict[str, Any]]) -> Dict[str, pd.Data
         "attendance_reports": df_reports,
         "attendance_details_records": df_records
     }
-
-# ---------- Public API: write Parquet ----------
-def write_parquet_local(dfs: Dict[str, pd.DataFrame], out_dir: str, overwrite: bool = True) -> Dict[str, str]:
-    """
-    Writes 'events.parquet', 'attendance_reports.parquet', 'attendance_records.parquet' to out_dir.
-    Returns dict of output file paths.
-    """
-    import os
-    os.makedirs(out_dir, exist_ok=True)
-
-    outputs = {}
-    for name, df in dfs.items():
-        if df.empty:
-            continue
-        path = f"{out_dir.rstrip('/').rstrip('\\')}/{name}.parquet"
-        if overwrite and os.path.exists(path):
-            os.remove(path)
-        df.to_parquet(path, index=False)
-        outputs[name] = path
-    return outputs
-
 def write_parquet_blob(
     dfs: Dict[str, pd.DataFrame],
     account_url: str,
