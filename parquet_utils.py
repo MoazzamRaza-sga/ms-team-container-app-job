@@ -75,7 +75,7 @@ def flatten_attendance_records(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
                         # "event_start": _get(ev, "start.dateTime"),
                         # "event_end": _get(ev, "end.dateTime"),
                         "onlineMeetingId": att.get("onlineMeetingId"),
-                        # "report_id": rep.get("report_id"),
+                        "report_id": rep.get("report_id"),
                         # "meetingStartDateTime": rep.get("meetingStartDateTime"),
                         # "meetingEndDateTime": rep.get("meetingEndDateTime"),
                         # "total_participants": rep.get("total_participants"),
