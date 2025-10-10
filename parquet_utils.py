@@ -87,8 +87,8 @@ def flatten_attendance_records(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
                         "joinDateTime": r.get("joinDateTime"),
                         "leaveDateTime": r.get("leaveDateTime"),
                         "durationInSeconds": r.get("durationInSeconds"),
-                        "externalRegistrationInformation_referrer":rec.get("attendanceIntervals",[]).get("referrer",[]),
-                        "externalRegistrationInformation_registrationId":rec.get("attendanceIntervals",[]).get("registrationId",[]),
+                        "externalRegistrationInformation_referrer":rec.get("externalRegistrationInformation").get("referrer"),
+                        "externalRegistrationInformation_registrationId":rec.get("externalRegistrationInformation").get("registrationId"),
 
                     })
 
