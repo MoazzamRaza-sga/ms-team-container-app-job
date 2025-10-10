@@ -119,19 +119,24 @@ def json_docs_to_dataframes(docs: Iterable[Dict[str, Any]]) -> Dict[str, pd.Data
         "attendance_reports": df_reports,
         "attendance_details_records": df_records
     }
+
+
+
 def write_parquet_blob(
     dfs: Dict[str, pd.DataFrame],
     account_url: str,
     container: str,
     overwrite: bool = True,
     app_prefix = "msteams",
-
 ) -> Dict[str, str]:
     """
     Writes Parquet files to Azure Blob at <container>/<prefix>/<name>.parquet.
+    Adds an 'elt_date' column (YYYY-MM-DD) to each dataset with today's UTC date.
     Returns dict of blob URLs.
     """
     now = datetime.now(timezone.utc)
+    elt_date_str = now.date().isoformat()  # e.g., '2025-10-10' (UTC)
+
     cred = DefaultAzureCredential()
     svc  = BlobServiceClient(account_url=account_url, credential=cred)
     cc   = svc.get_container_client(container)
@@ -144,9 +149,18 @@ def write_parquet_blob(
     for name, df in dfs.items():
         if df.empty:
             continue
+
+        # Ensure we don't mutate the caller's DataFrame
+        df_out = df.copy()
+
+        # Add/overwrite elt_date with today's date (as a string). If you prefer a date-like timestamp,
+        # you can use: pd.to_datetime(now.date()) instead.
+        df_out["elt_date"] = elt_date_str
+
         buf = io.BytesIO()
-        df.to_parquet(buf, index=False)
+        df_out.to_parquet(buf, index=False)
         buf.seek(0)
+
         blob_name = f"{app_prefix}/parquet/{name}/{now:%Y/%m/%d}/{name}.parquet"
         bc = cc.get_blob_client(blob_name)
         bc.upload_blob(
@@ -155,4 +169,5 @@ def write_parquet_blob(
             content_settings=ContentSettings(content_type="application/octet-stream"),
         )
         outputs[name] = f"{account_url.rstrip('/')}/{container}/{blob_name}"
+
     return outputs
