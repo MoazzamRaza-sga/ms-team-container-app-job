@@ -7,6 +7,7 @@ client_screte = os.getenv("client_screte","")
 # SGA_UPN = "sgacommittees@sganaturalgas.org"
 sga_upn=os.getenv("SGA_UPN","")   # <-- you specify SQA here in the URL, not in the token
  
+sga_upn2=os.getenv("SGA_UPN2","")
  
  
 def get_details(key=""):
@@ -14,6 +15,7 @@ def get_details(key=""):
         "tenant":tenant,
         "client_id":client_id,
         "client_scret":client_screte,
-        "sga_upn": sga_upn
+        "sga_upn": sga_upn,
+        "sga_upn2":sga_upn2 
     }
     return details[key]

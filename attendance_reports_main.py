@@ -13,8 +13,10 @@ from parquet_utils import json_docs_to_dataframes, write_parquet_blob
 TENANT        = cfg.get_details("tenant")
 CLIENT_ID     = cfg.get_details("client_id")
 CLIENT_SECRET = cfg.get_details("client_scret")
-SGA_UPN       = cfg.get_details("sga_upn")
+SGA_UPN1       = cfg.get_details("sga_upn")
+SGA_UPN2       = cfg.get_details("sga_upn2")
 
+users = [SGA_UPN1 ,SGA_UPN2 ]
 
 # ===== Registry-in-Blob settings (override via env if you like) =====
 REG_ACCOUNT_URL  = os.getenv("REG_ACCOUNT_URL",  "https://sgaanalyticsstorageacnt.blob.core.windows.net")
@@ -30,6 +32,9 @@ def _blob_client(account_url: str, container: str, blob_name: str):
     except ResourceExistsError:
         pass
     return svc.get_blob_client(container=container, blob=blob_name)
+
+
+
 
 def save_json_to_blob(
     json_payload,
@@ -207,7 +212,7 @@ def fetch_attendance_for_meeting(headers: dict, user_upn: str, meeting_id: str) 
     return all_reports
 
 # ---------- Main ----------
-def main():
+def main(SGA_UPN):
     try:
         access_token = acquire_app_token(TENANT, CLIENT_ID, CLIENT_SECRET)
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -329,4 +334,5 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    for user  in users:
+        main(user)
