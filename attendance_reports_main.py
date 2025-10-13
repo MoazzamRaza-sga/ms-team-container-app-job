@@ -16,7 +16,11 @@ CLIENT_SECRET = cfg.get_details("client_scret")
 SGA_UPN1       = cfg.get_details("sga_upn")
 SGA_UPN2       = cfg.get_details("sga_upn2")
 
-users = [SGA_UPN1 ,SGA_UPN2 ]
+users = {
+    "sgacommittees":SGA_UPN1,
+    "mstedman":SGA_UPN2
+}
+
 
 # ===== Registry-in-Blob settings (override via env if you like) =====
 REG_ACCOUNT_URL  = os.getenv("REG_ACCOUNT_URL",  "https://sgaanalyticsstorageacnt.blob.core.windows.net")
@@ -212,7 +216,7 @@ def fetch_attendance_for_meeting(headers: dict, user_upn: str, meeting_id: str) 
     return all_reports
 
 # ---------- Main ----------
-def main(SGA_UPN):
+def main(SGA_UPN,user_name):
     try:
         access_token = acquire_app_token(TENANT, CLIENT_ID, CLIENT_SECRET)
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -240,7 +244,7 @@ def main(SGA_UPN):
 
         # ---- SAVE #1: events-only snapshot (OVERWRITES within the same date folder) ----
         events_only_payload = {
-            "user": SGA_UPN,
+            "user": user_name,
             "windowStartUtc": start_iso,
             "windowEndUtc": end_iso,
             "fetchedUtc": to_iso_z(now_utc),
@@ -250,7 +254,7 @@ def main(SGA_UPN):
         events_only_url = save_json_to_blob(
             events_only_payload,
             app_prefix="msteams/json/events-only",
-            file_name="events",     # stable name -> overwrite in same folder/date
+            file_name=f"events_{user_name}",     # stable name -> overwrite in same folder/date
             overwrite=True
         )
         print("Saved EVENTS-ONLY JSON to:", events_only_url)
@@ -291,7 +295,7 @@ def main(SGA_UPN):
 
         # ---- SAVE #2: final (events + attendance) — OVERWRITES within same date folder ----
         final_json = {
-            "user": SGA_UPN,
+            "user": user_name,
             "windowStartUtc": start_iso,
             "windowEndUtc": end_iso,
             "fetchedUtc": to_iso_z(now_utc),
@@ -301,7 +305,7 @@ def main(SGA_UPN):
         final_url = save_json_to_blob(
             final_json,
             app_prefix="msteams/json/final-with-attendance",
-            file_name="event_attendance_details",  # stable name -> overwrite in same folder/date
+            file_name=f"event_attendance_details_{user_name}",  # stable name -> overwrite in same folder/date
             overwrite=True
         )
         print("Saved FINAL (events+attendance) JSON to:", final_url)
@@ -309,7 +313,7 @@ def main(SGA_UPN):
         
 
         docs = [events_only_payload, final_json]  # one or many
-        dfs = json_docs_to_dataframes(docs)
+        dfs = json_docs_to_dataframes(docs,user_name)
 
         # Write to blob
         urls = write_parquet_blob(
@@ -334,5 +338,5 @@ def main(SGA_UPN):
         sys.exit(1)
 
 if __name__ == "__main__":
-    for user  in users:
-        main(user)
+    for SGA_UPN,user_name  in users.items():
+        main(SGA_UPN,user_name)

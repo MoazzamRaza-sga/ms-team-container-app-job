@@ -95,7 +95,7 @@ def flatten_attendance_records(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
     return rows
 
 # ---------- Public API: JSON -> DataFrames ----------
-def json_docs_to_dataframes(docs: Iterable[Dict[str, Any]]) -> Dict[str, pd.DataFrame]:
+def json_docs_to_dataframes(docs: Iterable[Dict[str, Any]],user_name) -> Dict[str, pd.DataFrame]:
     """
     Accepts an iterable of JSON documents (dicts) produced by your exporter.
     Returns dict of DataFrames: {'events': df, 'attendance_reports': df, 'attendance_records': df}
@@ -121,9 +121,9 @@ def json_docs_to_dataframes(docs: Iterable[Dict[str, Any]]) -> Dict[str, pd.Data
                 df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
 
     return {
-        "events": df_events,
-        "attendance_reports": df_reports,
-        "attendance_details_records": df_records
+        f"events_{user_name}": df_events,
+        f"attendance_reports_{user_name}": df_reports,
+        f"attendance_details_records_{user_name}": df_records
     }
 
 
