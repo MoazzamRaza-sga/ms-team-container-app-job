@@ -338,5 +338,5 @@ def main(SGA_UPN,user_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    for SGA_UPN,user_name  in users.items():
+    for user_name,SGA_UPN  in users.items():
         main(SGA_UPN,user_name)
