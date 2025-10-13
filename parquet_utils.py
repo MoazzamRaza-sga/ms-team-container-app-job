@@ -168,7 +168,8 @@ def write_parquet_blob(
         df_out.to_parquet(buf, index=False)
         buf.seek(0)
 
-        blob_name = f"{app_prefix}/parquet/{name}/{now:%Y/%m/%d}/{name}.parquet"
+        folder = name.rsplit("_", 1)[0]
+        blob_name = f"{app_prefix}/parquet/{folder}/{now:%Y/%m/%d}/{name}.parquet"
         bc = cc.get_blob_client(blob_name)
         bc.upload_blob(
             buf.getvalue(),

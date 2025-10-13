@@ -324,12 +324,9 @@ def main(SGA_UPN,user_name):
         )
         print("Parquet written at:", urls)
 
-        # ---- Update registry in Blob (always overwrite) ----
-        if end_iso:
-            reg_url = save_checkpoint_to_blob(end_iso)
-            print("Updated registry blob:", reg_url, "->",end_iso)
-        else:
-            print("No valid meeting start times found to update registry.")
+        return end_iso
+
+        
 
         
 
@@ -338,5 +335,12 @@ def main(SGA_UPN,user_name):
         sys.exit(1)
 
 if __name__ == "__main__":
+    end_iso = None
     for user_name,SGA_UPN  in users.items():
-        main(SGA_UPN,user_name)
+        end_iso = main(SGA_UPN,user_name)
+    # ---- Update registry in Blob (always overwrite) ----
+    if end_iso:
+        reg_url = save_checkpoint_to_blob(end_iso)
+        print("Updated registry blob:", reg_url, "->",end_iso)
+    else:
+        print("No valid meeting start times found to update registry.")
