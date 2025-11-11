@@ -15,10 +15,12 @@ CLIENT_ID     = cfg.get_details("client_id")
 CLIENT_SECRET = cfg.get_details("client_scret")
 SGA_UPN1       = cfg.get_details("sga_upn")
 SGA_UPN2       = cfg.get_details("sga_upn2")
+SGA_UPN3       = cfg.get_details("sga_upn3")
 
 users = {
     "sgacommittees":SGA_UPN1,
-    "mstedman":SGA_UPN2
+    "mstedman":SGA_UPN2,
+    "sgatraining":SGA_UPN3
 }
 
 
